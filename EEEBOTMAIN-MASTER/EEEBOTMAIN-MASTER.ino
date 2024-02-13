@@ -14,7 +14,7 @@ float encoderDist;
 
 const char* ssid = "C01-08";       
 const char* password = "87654321";                      
-const char* mqtt_server = "192.168.137.67";
+const char* mqtt_server = "192.168.137.62";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -119,7 +119,8 @@ void loop() {
 
   //HC-SR04 Read
   sensorRead();
-  stopCheck();
+  requestEncoders();
+  // stopCheck();
 	delay(100);  
 }
 

@@ -45,9 +45,11 @@ int parked = 0;
 char message;
 char encoderBuffer[7];
 
-//encodes 0-255 to 100-520 range that was found for the servo.
+int targetAngle;
+
+//encodes 0-180 to 100-520 range that was found for the servo.
 void changeSteeringAngle(float angle){
-  steeringAngle = (angle * 1.65) + 100;
+  steeringAngle = (angle * 2.33) + 100;
   ledcWrite(servoChannel, steeringAngle);
     // Serial.print("Steering Angle: ");
     // Serial.println(abs(steeringAngle));
@@ -55,18 +57,15 @@ void changeSteeringAngle(float angle){
 
 void wiggle(int wiggleno){
   for (int i=0; i < wiggleno; i++){
-    changeSteeringAngle(0);
-    delay(100);
-    changeSteeringAngle(255);
-    delay(100);
-    Serial.println(i);
-    Serial.print("Wiggleno: ");
-    Serial.println(wiggleno);
+    changeSteeringAngle(45);
+    delay(300);
+    changeSteeringAngle(135);
+    delay(300);
   }
 }
 
 void straight(){
-  changeSteeringAngle(126);
+  changeSteeringAngle(90);
 }
 
 
@@ -153,44 +152,15 @@ void inputSteeringAngle(){
   }
 }
 
-// events to be made upon different requests of the Master ESP32
-void eventAct(){
-  switch(message)
-  {
-    case 's':
-      break; // REMOVE FUNCTIONALITY
-      Serial.println("STOP RECIEVED");
-      if (parked == 0){
-      park();
-      } else {
-        stopMotors();
-        Serial.println("DONE");
-        changeSteeringAngle(127);
-        while (true){
-        }
-      }
-      break;
-    case 'w':
-      Serial.print("WIGGLING");
-      delay(50);
-      wiggle(1);
-      delay(50);
-      message = ' ';
-      break;
-      
-  }
-}
-
-void receiveEvent(int numBytes){
-  Serial.println("\nMessage Recieved");
-  message = ' ';
-  while (Wire.available()) {
-    char c = Wire.read();
-    message = message + c;
-  Serial.println(message);    // write string to serial monitor
-  delay(100);
-  } 
-}
+void receiveEvent(){
+  int16_t a = 0;
+  int16_t b = 0;
+  uint8_t bytesReceived = Wire.requestFrom(0x08, 4);  // 4 indicates the number of bytes that are expected
+  uint8_t a16_9 = Wire.read();  // receive bits 16 to 9 of a (one byte)
+  uint8_t a8_1 = Wire.read();   // receive bits 8 to 1 of a (one byte)
+  targetAngle = (a16_9 << 8) | a8_1; // combine the two bytes into a 16 bit number
+  Serial.println(targetAngle);
+} 
 
 void requestEvent() { // Writing Encoder values to the master ESP32.
   Serial.println("request evented");
@@ -199,22 +169,6 @@ void requestEvent() { // Writing Encoder values to the master ESP32.
   Wire.write(encoderBuffer);
 }
 
-// Series of functions to produce the parking feature.
-void park(){ 
-  Serial.print("parking");
-  goForwards();
-  goDistance(20);
-  stopMotors();
-  delay(200);
-  changeSteeringAngle(255);
-  edifferential(0.8);
-  goBackwards();
-  goDistance(40);
-  edifferential(0.5);
-  straight();
-  message = 'g';
-  parked = 1;
-}
 
 void setup() {
   // put your setup code here, to run once:
@@ -238,8 +192,8 @@ void setup() {
 
   //Setup I2C with other ESP32
   Wire.begin(0x08);             // join i2c bus with address 8
-  Wire.onReceive(receiveEvent); // create a receive event
-  Wire.onRequest(requestEvent); // create a request event
+  // Wire.onReceive(receiveEvent); // create a receive event
+  // Wire.onRequest(requestEvent); // create a request event
 
   //initialise Serial Communication
   Serial.begin(9600);
@@ -248,15 +202,15 @@ void setup() {
   encoder1.setCount ( 0 );
   encoder2.attachHalfQuad ( 34, 35 );
   encoder2.setCount ( 0 );
-  goBackwards();
+  goForwards();
   //setup the steering angle
-  straight();
   delay(100);
   wiggle(3);
   delay(1500);
   motors(speedSetting, speedSetting);  //make a call to the 'motors' function and provide it with a value for each of the 2 motors - can be different for each motor - using same value here for expedience
   Serial.println("Starting...");
   straight();
+  delay(1000);
 }
 
 /*void bomb(){
@@ -265,8 +219,8 @@ void setup() {
 }*/
 
 void loop() {
-  eventAct();
   checkEncoders();
+  changeSteeringAngle(targetAngle);
   delay(100);
 }
 

@@ -47,7 +47,7 @@ void setup() {
 }
 
 void loop() {
-  int angle = followLinePID();
+  int angle = PID();
   sendAngle(angle);
   // //HC-SR04 Write
   // digitalWrite(trigPin, LOW);  
@@ -78,8 +78,7 @@ void sendAngle(int x){
   Wire.endTransmission();   // stop transmitting
   }
 
-int followLinePID() {
-
+float PID() {
   //Taking inputs from GPIO pins
   // int val1 = analogRead(32);
   int val2 = analogRead(33);
@@ -90,32 +89,38 @@ int followLinePID() {
 
   int IRarray[3] = {val2, val4, val6};
   float weightedAverage = 0;
-  for (int i=0; i<3; i++){
-      wa += (((i-3)/20) * IRarray[i]); // codes the sensor values to be weighted. IRsensors is an array of inputs on the ESP32 from the IR sensor modules. 
-    }    
-
+  
+  // Calculate weighted average
+  for (int i = 0; i < 3; i++) {
+    weightedAverage += ((i - 1) * IRarray[i]); // Assuming sensors are spaced 2 cm apart
+  }
+  
+  // PID Constants
+  float Kp = 0.5; // Proportional gain
+  float Ki = 0.1; // Integral gain
+  float Kd = 0.2; // Derivative gain
+  
+  // threshold value for considering black color
+  int targetValue = 3000;
+  
   // calculate the error as the difference between the target and the weighted average
-  int targetValue = 3000;  // Threshold value for considering black color
-
-  float error = targetValue - currentValue;
-
-  // Calculate the proportional, integral, and derivative terms
+  float error = targetValue - weightedAverage;
+  
+  // calculating all terms
   float proportional = Kp * error;
-  float integral += Ki * error;
+  integral += Ki * error;
   float derivative = Kd * (error - previousError);
 
-  // Calculate the output angle based on PID terms
+  // combine all terms and keep output within servo range
   float output = proportional + integral + derivative;
-
-  // Constrain the output angle to be between 0 and 180
-  int angle = constrain(output, 0, 180);
+  int angle = constrain(output, 45, 135);
 
   // Update the previous error for the next iteration
   previousError = error;
-  Serial.println(angle);
-return angle;
-}
 
+  Serial.println(angle);
+  return angle;
+}
 
 //      Max(White) Min(black)
 // val1 4095       4095

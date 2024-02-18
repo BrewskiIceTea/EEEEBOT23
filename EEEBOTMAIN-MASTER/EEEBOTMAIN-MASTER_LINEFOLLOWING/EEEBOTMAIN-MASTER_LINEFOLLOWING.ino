@@ -19,10 +19,10 @@ int value = 0;
 const int ledPin = 4;
 
 
-// Define PID constants
-float Kp = 1.0;
-float Ki = 0.0;
-float Kd = 0.0;
+// PID Constants
+float Kp = 0.5; // Proportional gain
+float Ki = 0.1; // Integral gain
+float Kd = 0.2; // Derivative gain
 
 float previousError = 0.0;
 float integral = 0.0;
@@ -92,13 +92,10 @@ float PID() {
   
   // Calculate weighted average
   for (int i = 0; i < 3; i++) {
-    weightedAverage += ((i - 1) * IRarray[i]); // Assuming sensors are spaced 2 cm apart
+    weightedAverage += ((i - 1) * IRarray[i]); 
   }
   
-  // PID Constants
-  float Kp = 0.5; // Proportional gain
-  float Ki = 0.1; // Integral gain
-  float Kd = 0.2; // Derivative gain
+
   
   // threshold value for considering black color
   int targetValue = 3000;

@@ -39,6 +39,8 @@ bool encoder2Paused = false;
 
 //Encoder position
 float newPosition;
+//Total encoder count cahce
+float enc1, enc2, oldenc1, oldenc2, encdiff;
 //what step of parking is completed
 int parked = 0;
 //I2C Message
@@ -77,6 +79,19 @@ void checkEncoders(){
   // Serial.println(newPosition);
 }
 
+void realtimeenc(){
+  //ENCODER CODE
+  enc1 = (encoder1.getCount()/2);
+  enc2 = (encoder2.getCount()/2);
+}
+
+void cachecurrentenc(){
+  //ENCODER CODE
+  realtimeenc();
+  oldenc1 = enc1;
+  oldenc2 = enc2;
+
+}
 void checkEncoder1(){
   //ENCODER CODE
   newPosition = (encoder1.getCount() / 2);
@@ -89,6 +104,29 @@ void checkEncoder2(){
   Serial.println(newPosition);
 }
 
+int checkEncoderdevi(char direction){
+  //ENCODER CODE
+  realtimeenc();
+  //making sure difference is calculated from most recent reading
+  encdiff = ((enc1 - oldenc1) - (enc2 - oldenc2));
+  //ensure difference is positive
+  if (encdiff < 0){
+    encdiff = encdiff * (-1);
+  }
+  Serial.print("encdiff");
+  Serial.println(encdiff);
+  //difference between two encoders turn 90 degrees
+  if (encdiff < 14 && encdiff >= 0 && direction == 'L'){
+    return 1;
+  }
+  else if(encdiff<22 && encdiff>=0 && direction =='R'){
+    return 1;
+  }
+  else {
+    return 0;
+  }
+  realtimeenc();
+}
 
 
 // Remember that the checkEncoders is an average between the two, so distance can be different give a non centred eDifferential.
@@ -98,9 +136,12 @@ void goDistance(float distance){
   while (abs(newPosition - tempPosition) < distance){
     checkEncoders();
     // Serial.print("\nTarget Position: ");
-    // Serial.print(tempPosition);
+    // Serial.println(tempPosition);
     // Serial.print("\nCurrent Position: ");
-    // Serial.print(newPosition);
+    // Serial.println(newPosition);
+    // Serial.print("Difference: ");
+    // Serial.println(abs(newPosition - tempPosition));
+    // Serial.println(distance);
     delay(50);
   }
 }
@@ -172,9 +213,13 @@ void inputSteeringAngle(){
 void eventAct(char function){
   Serial.println(" ");
   Serial.println(function);
+  realtimeenc();
+  
+  
   switch(function)
   { 
     case 'w':
+      realtimeenc();
       Serial.print("WIGGLING");
       delay(50);
       wiggle(1);
@@ -182,20 +227,45 @@ void eventAct(char function){
       message = ' ';
       break;
     case 'f':
+      realtimeenc();
       goForwards();
-      goDistance(15);
+      goDistance(60);
       break;
     case 'b':
+      realtimeenc();
       goBackwards();
-      goDistance(15);
+      goDistance(60);
       break;
     case 'r':
+      realtimeenc();
       changeSteeringAngle(230);
-      delay(1000);
+      delay(50);
+      cachecurrentenc();      
+      while (checkEncoderdevi('R') != 0){
+        realtimeenc();
+        delay(50);
+        Serial.println("delaying ");
+        Serial.println(enc1);
+        Serial.println(enc2);
+        realtimeenc();
+      }
+      straight();
       break;
     case 'l':
+      realtimeenc();
+      //Serial.println(encdiff);
       changeSteeringAngle(50);
-      delay(1000);
+      delay(50);
+      cachecurrentenc();      
+      while (checkEncoderdevi('L') != 0){
+        realtimeenc();
+        delay(50);
+        Serial.println("delaying ");
+        Serial.println(enc1);
+        Serial.println(enc2);
+        realtimeenc();
+      }
+      straight();
       break;
 
     default:
@@ -270,9 +340,5 @@ void setup() {
 
 
 void loop() {
-
+  realtimeenc();
 }
-
-
-
-

@@ -125,14 +125,20 @@ int main( int argc, char** argv )
     namedWindow("pre");
     createTrackbar("Mode", "Photo", &mode, 5, NULL);
     printf("hiii");
-    cv::Rect myROI(0, 70, 320, 170);
+    //cv::Rect myROI(0, 70, 320, 170);
     while(1)    // Main loop to perform image processing
     {
         Mat frame, frameHSV, frameBlur, frameEdges;
         frame = captureFrame(); // Capture a frame from the camera and store in a new matrix variable
+        Point p1(0,0);
+        Point p2(320, 40);
         flip(frame, frame, 0);
         flip(frame, frame, 1);
-        frame = frame(myROI);
+        //frame = frame(myROI);
+        rectangle(frame, p1, p2,Scalar(0,255,0), -1, LINE_8);
+        Point p3(0, 200);
+        Point p4(320, 240);
+        rectangle(frame, p3, p4,Scalar(0,255,0), -1, LINE_8);
         imshow("Photo",frame);
         changeColour(2);
 
@@ -164,7 +170,7 @@ int main( int argc, char** argv )
         // Variable for image topology data
         std::vector<Vec4i> hierarchy;
         // Calculate the contours and store them
-        cv::findContours(frameEdges, contours, hierarchy, RETR_TREE,CHAIN_APPROX_SIMPLE, Point(0, 0));
+        cv::findContours(frameEdges, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
         //Array for new contours
         std::vector< std::vector<cv::Point> > approxedcontours(contours.size());
 
@@ -212,6 +218,7 @@ int main( int argc, char** argv )
         int linePosition = *pcx;
         cv::circle(frame, cv::Point(linePosition, height), 5, cv::Scalar(255, 0, 0), -1); /// Blue dot
         printf("\n%d\n",linePosition);
+
         int centre = centreFrame;
         int centreDist2Line = centre - linePosition;
         cv::circle(frame, cv::Point(centre, height), 5, cv::Scalar(0, 0, 255), -1); /// Red dot
@@ -242,26 +249,27 @@ int main( int argc, char** argv )
         float numerator,denominator;
 
         //PID values for calc
-          float control_signal = 0;
-          int Kp = 3; //proportional gain
-          float Ki = 3; //integral gain
-          int Kd = 5; //derivative gain
-          int T = 10; //sample time in milliseconds (ms)
-          unsigned long last_time;
-          float total_error, last_error;
-    //calculateWeightedAverage
+        float control_signal = 0;
+        int Kp = 3; //proportional gain
+        float Ki = 3; //integral gain
+        int Kd = 5; //derivative gain
+        int T = 10; //sample time in milliseconds (ms)
+        unsigned long last_time;
+        float total_error, last_error;
 
-         for (int i = 0; i < 6; i++)
-      {
-        numerator += (pointPosition[i]*pointIntensity[i]);
-        denominator += pointIntensity[i];
-      }
+        //calculateWeightedAverage
 
-
-      float weightedAverage = (numerator)/(denominator);
+        for (int i = 0; i < 5; i++){
+            numerator += (pointPosition[i]*pointIntensity[i]);
+            denominator += pointIntensity[i];
+        }
 
 
-    //PID_control
+        float weightedAverage = (numerator)/(denominator);
+
+
+
+        //PID_control
       //clock_t current_time;
       //current_time = clock(); //=
       //current_time = ((double)current_time)/CLOCKS_PER_SEC; // in seconds
@@ -276,7 +284,7 @@ int main( int argc, char** argv )
         float delta_error = error - last_error; //difference of error for derivative term
 
         control_signal = Kp*error + (Ki*total_error) + (Kd*delta_error); //PID control compute
-
+        printf("Control System : %f\n", control_signal);
 
         last_error = error;
         //last_time = current_time;
@@ -318,6 +326,5 @@ int main( int argc, char** argv )
     }
 	return 0;
 }
-
 
 

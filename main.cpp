@@ -125,29 +125,41 @@ int main( int argc, char** argv )
     namedWindow("pre");
     createTrackbar("Mode", "Photo", &mode, 5, NULL);
     printf("hiii");
+    cv::Rect myROI(0, 70, 320, 170);
     while(1)    // Main loop to perform image processing
     {
-        Mat frame, frameHSV, frameThresh, frameBlur, frameEdges;
+        Mat frame, frameHSV, frameBlur, frameEdges;
         frame = captureFrame(); // Capture a frame from the camera and store in a new matrix variable
         flip(frame, frame, 0);
         flip(frame, frame, 1);
+        frame = frame(myROI);
         imshow("Photo",frame);
         changeColour(2);
 
         Mat frameCShift = Mat::zeros(frame.rows, frame.cols, CV_8UC1);
-        cvtColor(frame, frameCShift, COLOR_BGR2HSV);
-        inRange(frameCShift, Scalar(lowH, lowS, lowV), Scalar(highH, highS, highV), frameCShift);
-        imshow("Result", frameCShift);
         cvtColor(frame, frameHSV, COLOR_BGR2HSV);
+        inRange(frameHSV, Scalar(lowH, lowS, lowV), Scalar(highH, highS, highV), frameHSV);
         // Threshold for Blue
         //inRange(frameHSV, Scalar(95, 80, 60), Scalar(120, 255, 255), frameThresh);
         // Threshold for Red
         //inRange(frameHSV, Scalar(0, 170, 140), Scalar(179, 255, 255), frameThresh);
         // Create blurred image
-        cv::medianBlur(frameThresh, frameBlur, 15);
+        cv::medianBlur(frameHSV, frameBlur, 15);
         // Create edges from image
         cv::Canny(frameBlur, frameEdges, 100, 100*3, 3);
         // Variable for list of contours
+        int morph_size = 2;
+        Mat element = getStructuringElement(
+        MORPH_RECT,
+        Size(2 * morph_size + 1,
+             2 * morph_size + 1),
+        Point(morph_size, morph_size));
+
+        // Closing
+        morphologyEx(frameEdges, frameEdges,
+                     MORPH_CLOSE, element,
+                     Point(-1, -1), 2);
+        imshow("Result", frameEdges);
         std::vector< std::vector<cv::Point> > contours;
         // Variable for image topology data
         std::vector<Vec4i> hierarchy;
@@ -163,12 +175,14 @@ int main( int argc, char** argv )
         }
 
         Mat approxedContour = frame;
+
+
         for(int i = 0; i < contours.size(); i++)
         {
         // Loop through the contours
         drawContours(approxedContour, approxedcontours, i, Scalar(0,255,0), 3, LINE_4, noArray(), 0, Point() ); // Draw each in red }
         }
-
+        imshow("pre", approxedContour);
 
         int* pcx;
         std::vector<cv::Point> centres;
@@ -183,6 +197,7 @@ int main( int argc, char** argv )
         printf("Area of contour = %d\n", area);
         pcx = &cx;
         }
+        printf("hii");
         //Get size of frame, width/height
         int frameWidth,frameHeight,centreFrame;
         cv::Size sz = frame.size();
@@ -197,7 +212,6 @@ int main( int argc, char** argv )
         int linePosition = *pcx;
         cv::circle(frame, cv::Point(linePosition, height), 5, cv::Scalar(255, 0, 0), -1); /// Blue dot
         printf("\n%d\n",linePosition);
-
         int centre = centreFrame;
         int centreDist2Line = centre - linePosition;
         cv::circle(frame, cv::Point(centre, height), 5, cv::Scalar(0, 0, 255), -1); /// Red dot
@@ -217,7 +231,6 @@ int main( int argc, char** argv )
         int right1 = centre + gap*2;
         int right1Dist2Line = right1 - linePosition;
         cv::circle(frame, cv::Point(right1, height), 5, cv::Scalar(0, 0, 255), -1); /// Red dot
-
         //Position
         int pointPosition[5] = {left1,left2,centre,right2,right1};
         //Vec2i = ()
@@ -236,7 +249,6 @@ int main( int argc, char** argv )
           int T = 10; //sample time in milliseconds (ms)
           unsigned long last_time;
           float total_error, last_error;
-
     //calculateWeightedAverage
 
          for (int i = 0; i < 6; i++)
@@ -270,7 +282,7 @@ int main( int argc, char** argv )
         //last_time = current_time;
         //}
 
-        printf("Control signal: %f", control_signal);
+       // printf("Control signal: %f", control_signal);
 
         //double time_taken = ((double)current_time)/CLOCKS_PER_SEC; // in seconds
          //printf("\nTime: %f",current_time);
@@ -279,10 +291,8 @@ int main( int argc, char** argv )
 
         namedWindow("Original",WINDOW_AUTOSIZE);
         cv::imshow("Original", frame);
-        cv::imshow("Threshed", frameThresh);
         //cv::resize(approxedContour, approxedContour, cv::Size(frame.cols * 0.5,frame.rows * 0.5), 0, 0, CV_INTER_LINEAR);
         cv::imshow("ApproxContours",approxedContour);
-        waitKey();
 
 
 
